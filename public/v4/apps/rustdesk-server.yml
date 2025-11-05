@@ -25,8 +25,6 @@ services:
       - "21114:21114"      # (optional) Pro web console (TCP)
     depends_on:
       - hbbr
-    caproverExtra:
-      notExposeAsWebApp: "true"
 
 caproverOneClickApp:
   variables:
@@ -39,7 +37,7 @@ caproverOneClickApp:
     - id: '$$cap_always_use_relay'
       label: ALWAYS_USE_RELAY
       defaultValue: 'Y'
-      description: 'Y or N — set Y to avoid UDP dependency on CapRover/Swarm'
+      description: 'Y or N — Y recommended on CapRover to avoid UDP reliance'
       validRegex: '/^(Y|N|y|n)$/'
 
   instructions:
@@ -68,24 +66,30 @@ caproverOneClickApp:
       sudo ufw allow 21114/tcp
       ```
 
-      💾 Data is stored persistently in CapRover volume `$$cap_appname-data` mounted at `/root`.
+      💾 Data persists in CapRover volume `$$cap_appname-data` mounted at `/root`.
 
-      🧪 On CapRover, set `ALWAYS_USE_RELAY=Y` to avoid reliance on UDP 21116.
+      🧪 On CapRover, `ALWAYS_USE_RELAY=Y` is recommended to avoid reliance on UDP 21116 (unsupported mapping).
 
     end: |-
-      ✅ **RustDesk Server deployment completed successfully!**
+      ✅ **RustDesk Server deployment completed.**
 
-      The **ID key** is generated on first run of `hbbs`. Find it here in your data volume:
+      On the first `hbbs` start, the server generates keys and logs a line like:
       ```
-      /captain/data/config-caprover-volumes/$$cap_appname-data/id_ed25519.pub
+      INFO [src/common.rs] Private/public key written to id_ed25519/id_ed25519.pub
+      INFO [src/rendezvous_server.rs] Key: ifS35mW4JXowm5ZfYjQ1DGla2oLx8jBLB1Oj5jSTgoo=
       ```
+      The public key file is located here on the host:
+      ```
+      /var/lib/docker/volumes/captain--$$cap_appname-data/_data/id_ed25519.pub
+      ```
+      Copy the contents of that file (or use the **Key:** value printed in logs).
 
       **Use these in RustDesk client → Settings → Network:**
       ```
       ID Server: $$cap_appname.$$cap_root_domain
       Relay Server: $$cap_appname.$$cap_root_domain
       API Server: https://$$cap_appname.$$cap_root_domain
-      Key: contents of id_ed25519.pub (see path above)
+      Key: contents of id_ed25519.pub (or the "Key:" value from logs)
       ```
 
   displayName: RustDesk Server
