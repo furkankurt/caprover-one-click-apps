@@ -1,6 +1,6 @@
 captainVersion: 4
 services:
-  hbbr:
+  rustdesk-relay-server:
     image: rustdesk/rustdesk-server:$$cap_version
     command: hbbr
     volumes:
@@ -11,7 +11,7 @@ services:
     caproverExtra:
       notExposeAsWebApp: "true"
 
-  hbbs:
+  rustdesk-signal-server:
     image: rustdesk/rustdesk-server:$$cap_version
     command: hbbs
     environment:
@@ -24,7 +24,7 @@ services:
       - "21118:21118"      # (optional) Web client broker (TCP)
       - "21114:21114"      # (optional) Pro web console (TCP)
     depends_on:
-      - hbbr
+      - rustdesk-relay-server
 
 caproverOneClickApp:
   variables:
@@ -46,12 +46,12 @@ caproverOneClickApp:
       Since RustDesk Server is **not an HTTP app**, it doesn’t use CapRover ingress.
       The containers listen directly on these ports (TCP only on CapRover):
 
-        hbbs:
+        rustdesk-signal-server:
           - 21115/TCP — NAT type test
           - 21116/TCP — ID/heartbeat/connection (UDP not exposed on CapRover)
           - 21118/TCP — (optional) Web client support
           - 21114/TCP — (optional) Pro web console
-        hbbr:
+        rustdesk-relay-server:
           - 21117/TCP — Relay
           - 21119/TCP — (optional) Web client support
 
@@ -73,10 +73,10 @@ caproverOneClickApp:
     end: |-
       ✅ **RustDesk Server deployment completed.**
 
-      On the first `hbbs` start, the server generates keys and logs a line like:
+      On the first `rustdesk-signal-server` start, the server generates keys and logs a line like:
       ```
       INFO [src/common.rs] Private/public key written to id_ed25519/id_ed25519.pub
-      INFO [src/rendezvous_server.rs] Key: ifS35mW4JXowm5ZfYjQ1DGla2oLx8jBLB1Oj5jSTgoo=
+      INFO [src/rendezvous_server.rs] Key: xxxxxxxxxxxx
       ```
       The public key file is located here on the host:
       ```
@@ -90,6 +90,8 @@ caproverOneClickApp:
       Relay Server: $$cap_appname.$$cap_root_domain
       API Server: https://$$cap_appname.$$cap_root_domain
       Key: contents of id_ed25519.pub (or the "Key:" value from logs)
+
+      PS: Don't forget to enable HTTPS in rustdesk-signal-server url settings for secure connections.
       ```
 
   displayName: RustDesk Server
