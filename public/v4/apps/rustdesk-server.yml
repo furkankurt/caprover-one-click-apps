@@ -1,0 +1,109 @@
+captainVersion: 4
+services:
+    hbbr:
+        image: rustdesk/rustdesk-server:$$cap_version
+        command: hbbr
+        volumes:
+            - $$cap_appname-data:/root
+        ports:
+            - '21117:21117' # Relay (TCP)
+            - '21119:21119' # (optional) Web client relay (TCP)
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+
+    hbbs:
+        image: rustdesk/rustdesk-server:$$cap_version
+        command: hbbs
+        environment:
+            - ALWAYS_USE_RELAY=$$cap_always_use_relay
+        volumes:
+            - $$cap_appname-data:/root
+        ports:
+            - '21115:21115' # NAT type test (TCP)
+            - '21116:21116' # Connection / hole punching (TCP)
+            - '21116:21116/udp' # ID registration & heartbeat (UDP)
+            - '21118:21118' # (optional) Web client broker (TCP)
+            - '21114:21114' # (optional) Pro web console (TCP)
+        depends_on:
+            - hbbr
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+
+caproverOneClickApp:
+    variables:
+        - id: '$$cap_version'
+          label: RustDesk Server Image Tag
+          defaultValue: 'latest'
+          description: 'Docker tag for rustdesk/rustdesk-server (e.g., latest)'
+          validRegex: '/.{1,}/'
+
+        - id: '$$cap_always_use_relay'
+          label: ALWAYS_USE_RELAY
+          defaultValue: 'N'
+          description: 'Y or N — set to Y to force relay for strict NAT environments'
+          validRegex: '/^(Y|N|y|n)$/'
+
+    instructions:
+        start: |-
+            This One-Click App deploys a **RustDesk self-hosted server** with two containers:
+            - `hbbs` (broker)
+            - `hbbr` (relay)
+
+            Since RustDesk Server is **not an HTTP app**, it doesn’t use CapRover ingress.
+            The containers listen directly on these ports:
+
+              hbbs:
+                - 21115/TCP — NAT type test
+                - 21116/UDP — ID registration & heartbeat
+                - 21116/TCP — TCP hole punching & connection
+                - 21118/TCP — (optional) Web client support
+                - 21114/TCP — (optional) Pro web console
+              hbbr:
+                - 21117/TCP — Relay
+                - 21119/TCP — (optional) Web client support
+
+            🔐 **Open firewall ports (copy/paste all):**
+            ```bash
+            sudo ufw allow 21115/tcp
+            sudo ufw allow 21116/tcp
+            sudo ufw allow 21116/udp
+            sudo ufw allow 21117/tcp
+            # Optional (enable only if you need them)
+            sudo ufw allow 21118/tcp
+            sudo ufw allow 21119/tcp
+            sudo ufw allow 21114/tcp
+            ```
+
+            💾 Data is stored persistently in CapRover volume `$$cap_appname-data` mounted at `/root`.
+
+            🧪 For strict NAT/CGNAT, set `ALWAYS_USE_RELAY=Y`.
+
+        end: |-
+            ✅ **RustDesk Server deployment completed successfully!**
+
+            The **ID key** is automatically generated on the first run of `hbbs`.  
+            You can find it here inside your container or data volume:
+
+            ```
+            /captain/data/config-caprover-volumes/$$cap_appname-data/id_ed25519.pub
+            ```
+
+            Copy the contents of this key — it will be required by your RustDesk clients.
+
+            **Credentials to use in RustDesk client → Settings → Network:**
+
+            ```
+            ID Server: $$cap_appname.$$cap_root_domain
+            Relay Server: $$cap_appname.$$cap_root_domain
+            API Server: https://$$cap_appname.$$cap_root_domain
+            Key: contents of id_ed25519.pub (see path above)
+            ```
+
+            🔐 If you don’t use the web client or Pro console, you may close ports 21118, 21119, and 21114.
+
+    displayName: RustDesk Server (hbbs + hbbr)
+    isOfficial: false
+    description: >
+        Self-host your own RustDesk server. RustDesk is a full-featured open source remote control
+        alternative for self-hosting and security with minimal configuration.
+    documentation: 'https://github.com/rustdesk/rustdesk-server'
